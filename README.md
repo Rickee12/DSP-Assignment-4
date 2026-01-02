@@ -669,13 +669,90 @@ $$
 ## 9. Overlap-Add 重建(overlap_add)
 
 ```c
-
+void overlap_add(int num_frames, int S, int N_ola, complex double **yL_m, complex double **yR_m, complex double *yL_tmp, complex double *yR_tmp)
+{
+	int i, j, offset;
+	
+	complex double w[N];
+	double *norm = (double *)calloc(N_ola, sizeof(double));
+	
+	for(i = 0; i < N; i++)
+	{
+		w[i] = 0.54 - 0.46 * cos (2 * PI * i / ( N - 1 ) );   // hamming window
+	}
+	
+	for(i = 0; i < num_frames; i++)        // Overlap and multiply window
+	{
+		offset = i * S;   
+		for(j = 0; j < N; j++)     
+		{
+			yL_tmp[offset + j] += yL_m[i][j] * w[j];
+			yR_tmp[offset + j] += yR_m[i][j] * w[j];
+			norm[offset + j] += w[j]* w[j];
+		}
+	}
+	
+	for(i = 0; i < N_ola; i++)    // Normalize
+	{
+		if(norm[i] > 1e-12 )
+		{
+			yL_tmp[i] /= norm[i];
+	        yR_tmp[i] /= norm[i];
+		}
+	}
+}
 
 ```
 
 
 ## 10.取樣率轉換(SRC)
+```c
+void SRC(complex double *yL_tmp, complex double *yR_tmp, int16_t *yL, int16_t *yR, int N_ola, int *N_out)
+{
+    double phase = 0.0;
+    double step = (double)M / L;  // sampling rate change ratio
+    double frac;
+    int i, idx0, idx1;
+    for(i = 0; (int)phase < N_ola; i++)
+    {
+        idx0 = (int)phase;     // integer part
+        idx1 = idx0 + 1;
+        frac = phase - idx0;   // fractional part
+        if(idx1 >= N_ola)
+        {
+            idx1 = N_ola - 1;
+        }
+        
+        // Linear interpolation
+        yL[i] = (int16_t)round((1.0 - frac) * creal(yL_tmp[idx0]) + frac * creal(yL_tmp[idx1]));
+        yR[i] = (int16_t)round((1.0 - frac) * creal(yR_tmp[idx0]) + frac * creal(yR_tmp[idx1]));
+        
+        
+        // Clipping to 16-bit range
+        if(yL[i] > 32767)
+        {
+            yL[i] = 32767;
+        }
+        if(yL[i] < -32768)
+        {
+            yL[i] = -32768;
+        }
+        if(yR[i] > 32767)
+        {
+            yR[i] = 32767;
+        }
+        if(yR[i] < -32768)
+        {
+            yR[i] = -32768;
+        }
+        
+        phase += step;
+    }
+    *N_out = i;   //store the total numbers of output samples
+}
 
+
+```
 
 ## 11.主程式(main function)
 
