@@ -725,10 +725,9 @@ void overlap_add(int num_frames, int S, int N_ola, complex double **yL_m, comple
 
       -  `if(norm[i] > 1e-12)`: 若累積窗平方和大於 1e-12 
         
-      - 將累加後訊號除以窗平方和，完成歸一化：
+      - `yL_tmp[i] /= norm[i]`, `yR_tmp[i] /= norm[i]` : 將累加後訊號除以窗平方和，完成歸一化
         
-      - `yL_tmp[i] /= norm[i]`
-      - `yR_tmp[i] /= norm[i]` 
+    
 
 
 ## 10.取樣率轉換(SRC)
