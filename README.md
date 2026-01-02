@@ -553,10 +553,9 @@ void IFFT(complex double *y)
 
     - 蝶形計算：每次合併偶數與奇數序列時，用以下公式更新：
       
-      $$ y_even = x_even + W * x_odd $$
-      
-      $$ y_odd  = x_even - W * x_odd $$
- 
+    - \( y_{\text{even}} = x_{\text{even}} + W \cdot x_{\text{odd}} \)
+    - \( y_{\text{odd}} = x_{\text{even}} - W \cdot x_{\text{odd}} \)
+
     - W 為旋轉因子 $e^{-j \frac{2\pi k}{N}}$ ，負號表示向量旋轉方向。
 
     - 這個操作就像「左右互相加減旋轉」，逐層將時域訊號轉換到頻域。
