@@ -588,13 +588,17 @@ x[n] = \frac{1}{N} \sum_{k=0}^{N-1} X[k] e^{+j \frac{2\pi k n}{N}}
 $$
     
 	- 故我們可以利用複數指數的共軛性質:
+	
  $$
  \left( e^{-j\theta} \right)^{*} = e^{+j\theta}
  $$
+ 
     - 可將 IFFT 表示為：
+	
 $$
 x[n] = \frac{1}{N} \left( \sum_{k=0}^{N-1} X^{*}[k] e^{-j \frac{2\pi k n}{N}} \right)^{*}
 $$
+
     - 也就是：
       
 $$
