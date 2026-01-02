@@ -358,6 +358,7 @@ void framing(int N_in, int S, int num_frames, int16_t *L_in, int16_t *R_in, comp
 ## 6. FIR 低通濾波器(fir_design)
 
 ```c
+//filter disign
 void fir_design(double *h_pad)
 {
 	int m, n, idx, mid = (Q - 1) / 2;  // mid is filter center index
@@ -389,11 +390,13 @@ void fir_design(double *h_pad)
 	{
 		h[n] /= sum;
 	}
-
-
+	
 	// zero-padding
-
-
+	for(n = 0; n < N; n++)  //Initialization
+	{
+		h_pad[n] = 0;
+	}
+	
 	for(n = 0; n < N; n++) 
 	{
 		if(n < (Q - 1) / 2)                 // take the second half of h and put it at the beginning
@@ -409,12 +412,12 @@ void fir_design(double *h_pad)
 			h_pad[n] = 0;
 		}
 	}
-	
 }
 ```
 
 說明:
-- #### 因sinc函數在0的時候分母為0導致程式不好處理，故使用一個if-else來分開處理，在zero-padding時將原本濾波器
+- #### 因sinc函數在0的時候分母為0導致程式不好處理，故使用一個if-else來分開處理，在zero-padding時將原本濾波器的係數重新排列
+#### ，也就是將濾波器左右半段對稱搬移到 padded array 前後並將中心設 0，以保持線性相位並對齊 FFT，但因為原本的濾波器長度只有Q，其餘的部分要再補0直到長度為N。
 
 
 - #### 1.計算濾波器中心索引 `mid = (P-1)/2`。
@@ -440,8 +443,9 @@ void fir_design(double *h_pad)
   - 再將每個係數除以總和 `h[n] /= sum`，確保 DC gain = 1。
 
 - #### 4.Zero-padding：
-  
-  - 透過迴圈 `for(n = 0; n < N; n++)` 將原始濾波器 `h[n]` 的 Q 個係數重新排列並填入 `h_pad[n]`：
+  - 初始化 padded array:
+    - 使用迴圈 `for(n = 0; n < N; n++)` 將 `h_pad[n]` 全部先初始化為 0，後續就不用再額外補0，以方便之後做FFT運算。
+  - 再透過迴圈 `for(n = 0; n < N; n++)` 將原始濾波器 `h[n]` 的 Q 個係數重新排列並填入 `h_pad[n]`：
     
     - 若`n < (Q-1)/2`:
       - 將原本的濾波器後半段（從中心點到最後）放到 padded array 的前面可以讓濾波器在頻域的零頻位置（DC）對齊 FFT 序列的開頭，保持對稱性。
@@ -451,7 +455,7 @@ void fir_design(double *h_pad)
 
     - 若`n == (Q-1)/2`：
       - 將 padded array 的中心點設為 0，避免中心樣本重複。
-   - 
+      - 
 
 ## 7. FFT 與 IFFT 運算(FFT & IFFT)
 
