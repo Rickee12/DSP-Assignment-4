@@ -63,11 +63,11 @@
 
 - `#include <stdint.h>`：提供固定長度整數型別（如 int16_t），確保音訊資料位元數正確。
 
-- `#include <complex.h>：提供複數型別與運算（如 complex double, cexp），用於 FFT 與頻域處理。
+- `#include <complex.h>`：提供複數型別與運算（如 complex double, cexp），用於 FFT 與頻域處理。
   
 - `#include <math.h>`：提供數學函式（如 sin, cos），用於 FIR 濾波器設計。
 
-- `#include <memory.h>：提供記憶體操作相關函式（如 memset）。
+- `#include <memory.h>`：提供記憶體操作相關函式（如 memset）。
   
 - `#include <stdlib.h>`：提供動態記憶體配置（malloc, free）。
   
@@ -81,9 +81,9 @@
 
 - `P`= 1025：FIR 低通濾波器的 tap 數。
 
-- `Q = 1025：FIR 低通濾波器的 tap 數。
+- `Q` = 1025：FIR 低通濾波器的 tap 數。
 
-- `N = 2048：FFT 與 IFFT 的運算長度。
+- `N` = 2048：FFT 與 IFFT 的運算長度。
 
 - `Wc` = PI / M：正規化截止角頻率。
 
@@ -279,16 +279,82 @@ void write_wav_stereo(const char *filename, const int16_t *L_buf, const int16_t 
 
 
 
-##  5. FIR 濾波器設計函數（fir_design）
+##  5. 訊號分幀與加窗處理(framing)
 
 ```c
-void fir_design(double *h)
+void framing(int N_in, int S, int num_frames, int16_t *L_in, int16_t *R_in, complex double **xL_m, complex double **xR_m)
 {
-	int m, n, mid = (P - 1) / 2;  // mid is filter center index
-	double sum = 0;
-	double sinc;
+	int i, j, idx;
+	complex double w[N];
+	for(i = 0; i < N; i++)
+	{
+		w[i] = 0.54 - 0.46 * cos (2 * PI * i / ( N - 1 ) );   // hamming window
+	}
+		
+	for(i = 0; i < num_frames; i++)  //Initialize
+	{
+		for(j = 0; j < N; j++)
+		{
+			xL_m[i][j] = 0;
+			xR_m[i][j] = 0;
+		}
+	}	
 	
-	for(n = 0; n < P; n++)
+	for(i = 0; i < num_frames ; i++)    // Loop over frames
+	{
+		for(j = 0; j < P; j++)          // Loop over samples in frame and multiply mindow
+		{
+			idx = i * S + j;
+			if(idx < N_in)
+			{
+				xL_m[i][j] = L_in[idx] * w[j];
+			    xR_m[i][j] = R_in[idx] * w[j];
+			}
+		}
+	}
+}
+
+```
+
+
+說明:
+- #### 此函數主要是處理framing的部分，輸入的訊號需被切分為多個重疊的frames並再加上window，以方便後續能夠有效的進行FFT與頻域處理
+
+- #### 1.初始化窗函數與變數：
+   - 宣告 `w[N]`，以儲存 Hamming window。
+   - `w[i] = 0.54 - 0.46 * cos(2πi / (N - 1))`， 藉由`for(i = 0; i < N; i++)`迴圈逐個計算window的係數，以降低頻譜洩漏。
+
+- #### 2.初始化輸出矩陣：
+
+   - 以雙層`for`迴圈將 `xL_m` 與 `xR_m` 中所有 frame 與樣本初始化為 0。
+   - 外層迴圈`for(i = 0; i < num_frames; i++)` : 將每一個frame依序處理。
+   - 內層迴圈`for(j = 0; j < N; j++)` : 將frame裡的每一個樣本點都設為0。
+
+- #### 3.分幀與加窗處理：：
+
+  - 外層迴圈先依序處理每一個frame，而內層迴圈則處理每一個frame的前 P 個樣本。
+
+  - 在`for`迴圈裡不斷計算對應的輸入索引
+    - `i` 表示目前處理的第 `i` 個 frame。
+    - `S` 為 hop length，代表兩個相鄰frame在時間軸上的位移量。
+    - `j`則表示為當下那個frame的第 `j` 個樣本。
+  - 將 frame 起始位置與 frame 內索引相加，得到對應輸入訊號的位置：`idx = i * S + j`。
+    - 若 `idx < N_in`，表示尚未超出輸入訊號範圍:
+      - 將左聲道樣本乘上 Hamming window，存入 `xL_m[i][j]`。
+      - 將右聲道樣本乘上 Hamming window，存入 `xR_m[i][j]`。
+  - 此處理完成後，每個 frame 皆為長度 N 的複數序列，可用於後續 FFT 分析。
+ 
+    
+## 6. FIR 低通濾波器(fir_design)
+
+```c
+void fir_design(double *h_pad)
+{
+	int m, n, idx, mid = (Q - 1) / 2;  // mid is filter center index
+	double sum = 0, sinc;
+	double h[Q];
+
+	for(n = 0; n < Q; n++)
 	{
 		m = n - mid;
 		if(m == 0)             //sinc center
@@ -299,73 +365,38 @@ void fir_design(double *h)
 		{
 			sinc = sin( Wc * m) / (PI * m);
 		}
-	    double w = 0.54 - 0.46 * cos(2 * PI * n / (P - 1));   //hamming window
+	    double w = 0.54 - 0.46 * cos(2 * PI * n / (Q - 1));   //hamming window
 	    h[n] = sinc*w;	      //impulse response
 	}           
 	     
     // Normalize filter coefficients    
-	for(n = 0; n < P; n++)
+	for(n = 0; n < Q; n++)
 	{
 		sum += h[n];
 	}
 	
-	for(n = 0; n < P; n++)
+	for(n = 0; n < Q; n++)
 	{
 		h[n] /= sum;
 	}
-}
-
-```
-
-
-說明:
-- #### 因sinc函數在0的時候分母為0導致程式不好處理，故使用一個if-else來分開處理
-
-
-- #### 1.計算濾波器中心索引 `mid = (P-1)/2`。
-
-- #### 2.`for` 迴圈：
-
-   - 計算對應的 `m = n - mid`。
-
-   - 計算 sinc 函數：
-
-     - 若 `m = 0`，取 `sinc = Wc / PI`（中心點值）。
-
-     - 否則 `sinc = sin( Wc * m) / (PI * m)`。
-
-   - 計算 Hamming window` w = 0.54 - 0.46 * cos(2 * PI * n / (P - 1))`。
-
-   - 將 sinc 與窗函數相乘得到濾波器脈衝響應 `h[n] = sinc * w`。
-
-- #### 3.正規化濾波器係數：
-
-  - 先計算總和 `sum = Σ h[n]`。
-
-  - 再將每個係數除以總和 `h[n] /= sum`，確保 DC gain = 1。
-
-
-## 6. 多相濾波器分解函數（polyphase_decompose）
-
-```c
-void polyphase_decompose(const double *h, double h_poly[L][(P+L-1)/L], int *phase_len)
-{
-	int n, r, idx;
-	int max_len = 0;  // maximum length among all polyphase filters
-	for(r = 0; r < L; r++)
+	
+	// zero-padding
+	for(n = 0; n < N; n++) 
 	{
-		idx = 0;
-		for(n = r; n < P; n+=L)        // Extract every L-th coefficient starting from index r
+		if(n < (Q - 1) / 2)                 // take the second half of h and put it at the beginning
 		{
-			h_poly[r][idx] = h[n];
-			idx++;
+			h_pad[n] = h[(Q - 1) / 2 + n];
 		}
-		phase_len[r] = idx;     // Store the number of taps for this phase
-		if(idx > max_len)
+		else if(n > (Q - 1) / 2)            // take the first half of h and put it after the center
 		{
-			max_len = idx;
+			h_pad[n] = h[n - (Q - 1) / 2];
+		}
+		else                                // set the center point to 0 
+		{
+			h_pad[n] = 0;
 		}
 	}
+	
 }
 ```
 
