@@ -552,14 +552,15 @@ void IFFT(complex double *y)
     - 每個子 DFT 再拆成更小的偶數/奇數序列，直到每個子序列長度為 1。
 
     - 蝶形計算：每次合併偶數與奇數序列時，用以下公式更新：
-      
-      $$
-      y_{\text{even} = x{\text{even} + W * x_{\text{odd}}
-      $$
-      
-      $$
-      y_{\text{odd}}  = x_{\text{even} - W * x_{\text{odd}}
-      $$
+ 
+$$
+y_{\text{even}} = x_{\text{even}} + W \cdot x_{\text{odd}}
+$$
+
+$$
+y_{\text{odd}} = x_{\text{even}} - W \cdot x_{\text{odd}}
+$$
+
       
     - W 為旋轉因子 $e^{-j \frac{2\pi k}{N}}$ ，負號表示向量旋轉方向。
 
