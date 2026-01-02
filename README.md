@@ -553,9 +553,9 @@ void IFFT(complex double *y)
 
     - 蝶形計算：每次合併偶數與奇數序列時，用以下公式更新：
       
-      $$y_even = x_even + W * x_odd$$
+      $$y_{\text{even} = x{\text{even} + W * x_{\text{odd}}$$
       
-      $$y_odd  = x_even - W * x_odd$$
+      $$y_{\text{odd}}  = x_{\text{even} - W * x_{\text{odd}}$$
 
     - W 為旋轉因子 $e^{-j \frac{2\pi k}{N}}$ ，負號表示向量旋轉方向。
 
@@ -573,7 +573,7 @@ void IFFT(complex double *y)
     - 概念說明: IFFT 的目的是將頻域序列轉換回時域。觀察 FFT 與 IFFT 的數學形式可以發現，兩者的差別只在於指數的正負號與是否除以 N。
     - FFT 定義為：
       
-    - $$ x[n] = \frac{1}{N} \sum_{k=0}^{N-1} Y[k] \cdot e^{j \frac{2\pi k n}{N}} $$
+    - $$x[n] = \frac{1}{N} \sum_{k=0}^{N-1} Y[k] \cdot e^{j \frac{2\pi k n}{N}}$$
       
     - 而 IFFT 定義為：
       
