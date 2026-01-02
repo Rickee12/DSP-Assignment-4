@@ -655,61 +655,16 @@ void frequency_multiply(int num_frames, complex double **xL_m, complex double **
 
 ```
 說明：
+- #### 理論解釋:在time domain 做 convolution 可以等效於在 frequency domain上相乘，可表示為:
 
-- #### 1.宣告變數：
+$$
+y[n] = x[n] * h[n] \quad \Longleftrightarrow \quad Y[k] = X[k] \cdot H[k]
+$$
 
-     - `*L_in, *R_in`：輸入左右聲道 PCM 陣列指標。
-
-     - `*L_out, *R_out`：輸出左右聲道 PCM 陣列指標。
-
-     - `N_in`：輸入樣本數，`N_out_L, N_out_R`：左右輸出樣本數。
-
-     - `fs_in, fs_out`：輸入與輸出取樣率。
-
-     - `input_wav, output_wav`：輸入與輸出 WAV 檔案路徑。
-
-- #### 2.讀取輸入 WAV：
-
-     - 呼叫 `read_wav_stereo`，將檔案讀入左右聲道陣列。
-
-     - 若失敗，輸出錯誤訊息並結束程式。
-
-     - 印出輸入樣本數與取樣率。
-
-- #### 3.設計 FIR 濾波器並做多相分解：
-
-     - 宣告 `h` 為濾波器係數，`h_poly` 為多相濾波器矩陣，`phase_len` 記錄每個相位長度。
-
-     - 呼叫 `fir_design` 設計濾波器。
-
-     - 呼叫 `polyphase_decompose` 將濾波器分解為多相結構。
-
-- #### 4.配置輸出陣列記憶體：
-
-     - 計算最大輸出樣本數 `max_out`。
-
-     - 動態分配記憶體給輸出陣列 `L_out` 與 `R_out`。
-
-- #### 5.執行多相 SRC：
-
-     - 對左、右聲道分別呼叫 `src_polyphase` 進行取樣率轉換。
-
-     - 取左右輸出樣本數最小值作為最終輸出長度 `N_ou`t。
-
-     - 計算輸出取樣率 `fs_out = fs_in * L / M`。
-
-- #### 6.寫入輸出 WAV：
-
-     - 呼叫`write_wav_stereo` 將轉換後音訊寫入檔案。
-
-- #### 7.釋放記憶體與結束程式：
-
-     - 釋放 `*L_in, *R_in, *L_out, *R_out` 的動態記憶體。
-
-	 - 印出輸出取樣率訊息。
-
-     - 程式結束 `return 0`。
-
+- #### 程式說明:
+  - `for(i = 0; i < num_frames; i++) ` :外層迴圈負責決定正在處理哪一個frame。
+  - `for(j = 0; j < N; j++)` :內層迴圈負責決定frame裡的哪一個頻域樣本要與濾波器頻譜做相乘。
+  - `yL_m[i][j] = xL_m[i][j] * H[j]` 與 `yR_m[i][j] = xR_m[i][j] * H[j]` ：分別處理左、右聲道的頻域濾波。
 
 ## 9. 
 
