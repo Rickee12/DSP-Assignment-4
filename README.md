@@ -532,9 +532,8 @@ void IFFT(complex double *y)
 - ### 理論解釋:
   - #### 1.Bit Reversal（位元反轉）
      
-    概念：在 FFT 中，離散傅立葉變換（DFT）可拆成偶數索引與奇數索引的計算，不斷拆分直到每個子問題長度為 1。
-      
-    對應到索引：拆分過程會改變原始訊號的排列順序。例如對 N=8，經過三層拆分後的輸入順序變為 `[0, 4, 2, 6, 1, 5, 3, 7]`。
+    概念：在 FFT 中，離散傅立葉變換（DFT）可以不斷的拆成偶數索引與奇數索引的計算。
+    拆分過程會改變原始訊號的排列順序。例如對 N=8，經過三層拆分後的輸入順序變為 `[0, 4, 2, 6, 1, 5, 3, 7]`。
       
     二進位觀點：這個排列正好對應將原始索引的二進位數字反轉（bit reversal）：
     0 → 000 → 000 → 0
@@ -576,7 +575,7 @@ W 為旋轉因子 $e^{-j \frac{2\pi k}{N}}$ ，負號表示向量旋轉方向。
 第二層繼續拆分偶奇，直到單點，最終得到完整頻域結果。
      
   - #### 3.IFFT
-概念說明: IFFT 的目的是將頻域序列轉換回時域。觀察 FFT 與 IFFT 的數學形式可以發現，兩者的差別只在於指數的正負號與是否除以 N。
+概念說明: IFFT 的目的是將頻域序列轉換回時域。 FFT 與 IFFT 的數學式的差別基本上只在於指數的正負號以及有沒有除以 N。
 FFT 定義為：
       
 $$
@@ -663,7 +662,9 @@ $$
 
 - #### 程式說明:
   - `for(i = 0; i < num_frames; i++) ` :外層迴圈負責決定正在處理哪一個frame。
+    
   - `for(j = 0; j < N; j++)` :內層迴圈負責決定frame裡的哪一個頻域樣本要與濾波器頻譜做相乘。
+    
   - `yL_m[i][j] = xL_m[i][j] * H[j]` 與 `yR_m[i][j] = xR_m[i][j] * H[j]` ：分別處理左、右聲道的頻域濾波。
 
 ## 9. Overlap-Add 重建(overlap_add)
@@ -703,6 +704,31 @@ void overlap_add(int num_frames, int S, int N_ola, complex double **yL_m, comple
 }
 
 ```
+
+說明:
+- #### 理論解釋:一般時域線性卷積中，輸出長度為輸入長度加上脈衝響應的長度。然而，FFT-based filtering 中所進行的是有限長度的 circular convolution，FFT 的長度限制了時域輸出的 index 範圍，使得經 IFFT 後的輸出長度仍與 FFT 長度相同。由於輸入訊號以 frame 為單位進行 FFT-based filtering，每個 frame 的長度皆為 N，經過頻域相乘與 IFFT 後，輸出 frame 的長度仍為 N。但是frame hop length比輸出的長度還小那overlap_add 基本上就是不同的 frame 在時間軸上的輸出區段會產生部分重疊 這樣才會對應到一般時域的線性捲積。
+  
+- #### 程式說明:
+  - #### 1. 初始化
+    - `complex double w[N]`： Hamming window 陣列定義，並以迴圈`for(i = 0; i < N; i++)`計算每個樣本的窗函數值。
+    - `double *norm = calloc(N_ola, sizeof(double))`：建立歸一化陣列，用於累計重疊區段窗函數平方和。
+      
+  - #### 2. Frame 重疊加總
+    - 外層迴圈 `for(i = 0; i < num_frames; i++)`：每個 frame都跑過一次。
+
+    - 計算偏移量 offset = i * S，將當前 frame 對應到整體輸出訊號的位置。
+
+    - 內層迴圈 for(j = 0; j < N; j++)：將 frame 內的每個樣本都跑過一次，並將其加窗後累加到輸出的暫存陣列裡。
+    - 
+  - #### 3. 歸一化(Normalization)
+    - 外層迴圈 `for(i = 0; i < N_ola; i++)`：遍歷整個輸出長度。
+
+      - 若累積窗平方和大於 1e-12 ，`if(norm[i] > 1e-12)`
+        
+      - 將累加後訊號除以窗平方和，完成歸一化：
+        
+      - `yL_tmp[i] /= norm[i]`
+      - `yR_tmp[i] /= norm[i]` 
 
 
 ## 10.取樣率轉換(SRC)
