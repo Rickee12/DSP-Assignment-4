@@ -580,7 +580,7 @@ W 為旋轉因子 $e^{-j \frac{2\pi k}{N}}$ ，負號表示向量旋轉方向。
 FFT 定義為：
       
 $$
-x[n] = \frac{1}{N} \sum_{k=0}^{N-1} Y[k] \cdot e^{j \frac{2\pi k n}{N}}
+x[n] = \frac{1}{N} \sum_{k=0}^{N-1} X[k] \cdot e^{j \frac{2\pi k n}{N}}, \quad n = 0,1,\dots,N-1
 $$
       
 而 IFFT 定義為：
@@ -604,9 +604,7 @@ $$
 
 最後可得：
       
-$$
-x[n] = \frac{1}{N} \left( \text{FFT}(X^*[k]) \right)^*
-$$
+
  
 故我們可以將輸入的頻域信號先取共軛，接著再去做FFT的運算，最後再做一次共軛就等效於IFFT，把原本的頻域信號再轉回時域信號。
 
