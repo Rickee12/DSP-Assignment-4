@@ -595,15 +595,15 @@ void IFFT(complex double *y)
     
     - 可將 IFFT 表示為：
       
-      $$
-      x[n] = \frac{1}{N} \left( \sum_{k=0}^{N-1} X^{*}[k] e^{-j \frac{2\pi k n}{N}} \right)^{*}
-      $$
+$$
+x[n] = \frac{1}{N} \left( \sum_{k=0}^{N-1} X^{*}[k] e^{-j \frac{2\pi k n}{N}} \right)^{*}
+$$
       
     - 也就是：
       
-      $$
-      x[n] = \frac{1}{N} \operatorname{conj}(\operatorname{FFT}(\operatorname{conj}(X[k])))
-      $$
+$$
+x[n] = \frac{1}{N} \operatorname{conj}(\operatorname{FFT}(\operatorname{conj}(X[k])))
+$$
       
     - 故我們可以將輸入的頻域信號先取共軛，接著再去做FFT的運算，最後再做一次共軛就等效於IFFT，把原本的頻域信號再轉回時域信號。
 
