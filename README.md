@@ -598,7 +598,7 @@ $$
 可將 IFFT 表示為：
 
 $$
-x[n] = \frac{1}{N} \left( \sum_{k=0}^{N-1} X^*[k] \, e^{-j \frac{2\pi k n}{N}} \right)^*
+x[n] = \frac{1}{N} \( \sum_{k=0}^{N-1} X^*[k] \, e^{-j \frac{2\pi k n}{N}})^*
 $$
 
 最後可得：
