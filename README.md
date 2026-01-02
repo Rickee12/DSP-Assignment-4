@@ -561,6 +561,7 @@ $$
 y_{\text{odd}} = x_{\text{even}} - W \cdot x_{\text{odd}}
 $$
 
+
     W 為旋轉因子 $e^{-j \frac{2\pi k}{N}}$ ，負號表示向量旋轉方向。
 
     這個操作就像「左右互相加減旋轉」，逐層將時域訊號轉換到頻域。
@@ -569,8 +570,8 @@ $$
 
     假設訊號 `[x0, x1, x2, x3, x4, x5, x6, x7]`
     拆偶奇後第一層計算：
-    - `[x0+x4, x1+x5*W1, x2+x6*W2, x3+x7*W3]`  → 偶數合併奇數
-    - `[x0-x4, x1-x5*W1, x2-x6*W2, x3-x7*W3]`  → 奇數合併偶數
+    `[x0+x4, x1+x5*W1, x2+x6*W2, x3+x7*W3]`  → 偶數合併奇數
+    `[x0-x4, x1-x5*W1, x2-x6*W2, x3-x7*W3]`  → 奇數合併偶數
     第二層繼續拆分偶奇，直到單點，最終得到完整頻域結果。
      
   - #### 3.IFFT
@@ -594,17 +595,17 @@ $$
  $$
  
 可將 IFFT 表示為：
-	
+
 $$
-x[n] = \frac{1}{N} \left( \sum_{k=0}^{N-1} X^{*}[k] e^{-j \frac{2\pi k n}{N}} \right)^{*}
+x[n] = \frac{1}{N} \left( \sum_{k=0}^{N-1} X^*[k] \, e^{-j \frac{2\pi k n}{N}} \right)^*
 $$
 
 最後可得：
       
 $$
-x[n] = \frac{1}{N} \operatorname{conj}(\operatorname{FFT}(\operatorname{conj}(X[k])))
+x[n] = \frac{1}{N} \left( \text{FFT}(X^*[k]) \right)^*
 $$
-      
+ 
 故我們可以將輸入的頻域信號先取共軛，接著再去做FFT的運算，最後再做一次共軛就等效於IFFT，把原本的頻域信號再轉回時域信號。
 
 - ### 程式說明
