@@ -552,8 +552,15 @@ void IFFT(complex double *y)
     - 每個子 DFT 再拆成更小的偶數/奇數序列，直到每個子序列長度為 1。
 
     - 蝶形計算：每次合併偶數與奇數序列時，用以下公式更新：
-      $$y_{\text{even} = x{\text{even} + W * x_{\text{odd}}$$
-      $$y_{\text{odd}}  = x_{\text{even} - W * x_{\text{odd}}$$
+      
+      $$
+      y_{\text{even} = x{\text{even} + W * x_{\text{odd}}
+      $$
+      
+      $$
+      y_{\text{odd}}  = x_{\text{even} - W * x_{\text{odd}}
+      $$
+      
     - W 為旋轉因子 $e^{-j \frac{2\pi k}{N}}$ ，負號表示向量旋轉方向。
 
     - 這個操作就像「左右互相加減旋轉」，逐層將時域訊號轉換到頻域。
@@ -569,25 +576,25 @@ void IFFT(complex double *y)
   - #### 3.IFFT
     - 概念說明: IFFT 的目的是將頻域序列轉換回時域。觀察 FFT 與 IFFT 的數學形式可以發現，兩者的差別只在於指數的正負號與是否除以 N。
     - FFT 定義為：
-      
-      $$x[n] = \frac{1}{N} \sum_{k=0}^{N-1} Y[k] \cdot e^{j \frac{2\pi k n}{N}}$$
-      
+      $$
+      x[n] = \frac{1}{N} \sum_{k=0}^{N-1} Y[k] \cdot e^{j \frac{2\pi k n}{N}}
+      $$
     - 而 IFFT 定義為：
-      
-      $$x[n] = \frac{1}{N} \sum_{k=0}^{N-1} X[k] e^{+j \frac{2\pi k n}{N}}$$
-
+      $$
+      x[n] = \frac{1}{N} \sum_{k=0}^{N-1} X[k] e^{+j \frac{2\pi k n}{N}}
+      $$
 	- 故我們可以利用複數指數的共軛性質:
-    
-      $$\left( e^{-j\theta} \right)^{*} = e^{+j\theta}$$
-    
+      $$
+      \left( e^{-j\theta} \right)^{*} = e^{+j\theta}
+      $$
     - 可將 IFFT 表示為：
-      
-      $$x[n] = \frac{1}{N} \left( \sum_{k=0}^{N-1} X^{*}[k] e^{-j \frac{2\pi k n}{N}} \right)^{*}$$
-      
+      $$
+      x[n] = \frac{1}{N} \left( \sum_{k=0}^{N-1} X^{*}[k] e^{-j \frac{2\pi k n}{N}} \right)^{*}
+      $$
     - 也就是：
- 
-      $$x[n] = \frac{1}{N} \operatorname{conj}(\operatorname{FFT}(\operatorname{conj}(X[k])))$$
-      
+      $$
+      x[n] = \frac{1}{N} \operatorname{conj}(\operatorname{FFT}(\operatorname{conj}(X[k])))
+      $$
     - 故我們可以將輸入的頻域信號先取共軛，接著再去做FFT的運算，最後再做一次共軛就等效於IFFT，把原本的頻域信號再轉回時域信號。
 
 - ### 程式說明
