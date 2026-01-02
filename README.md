@@ -553,9 +553,9 @@ void IFFT(complex double *y)
 
     - 蝶形計算：每次合併偶數與奇數序列時，用以下公式更新：
  
-$$
-y_{\text{even}} = x_{\text{even}} + W \cdot x_{\text{odd}}
-$$
+    - $$
+    - y_{\text{even}} = x_{\text{even}} + W \cdot x_{\text{odd}}
+    - $$
 
 $$
 y_{\text{odd}} = x_{\text{even}} - W \cdot x_{\text{odd}}
