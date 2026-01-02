@@ -603,9 +603,11 @@ $$
 
 
 最後可得：
-      
 
- 
+$$
+x[n] = \frac{1}{N} \, \text{conj} \Big( \text{FFT} \big( \text{conj}(X[k]) \big) \Big), \quad n = 0,1,\dots,N-1
+$$
+
 故我們可以將輸入的頻域信號先取共軛，接著再去做FFT的運算，最後再做一次共軛就等效於IFFT，把原本的頻域信號再轉回時域信號。
 
 - ### 程式說明
