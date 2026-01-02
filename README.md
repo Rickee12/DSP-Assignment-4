@@ -716,14 +716,14 @@ void overlap_add(int num_frames, int S, int N_ola, complex double **yL_m, comple
   - #### 2. Frame 重疊加總
     - 外層迴圈 `for(i = 0; i < num_frames; i++)`：每個 frame都跑過一次。
 
-    - 計算偏移量 offset = i * S，將當前 frame 對應到整體輸出訊號的位置。
+    - 計算偏移量 `offset = i * S`，將當前 frame 對應到整體輸出訊號的位置。
 
-    - 內層迴圈 for(j = 0; j < N; j++)：將 frame 內的每個樣本都跑過一次，並將其加窗後累加到輸出的暫存陣列裡。
+    - 內層迴圈 `for(j = 0; j < N; j++)`：將 frame 內的每個樣本都跑過一次，並將其加窗後累加到輸出的暫存陣列裡。
     - 
   - #### 3. 歸一化(Normalization)
     - 外層迴圈 `for(i = 0; i < N_ola; i++)`：遍歷整個輸出長度。
 
-      - 若累積窗平方和大於 1e-12 ，`if(norm[i] > 1e-12)`
+      -  `if(norm[i] > 1e-12)`: 若累積窗平方和大於 1e-12 
         
       - 將累加後訊號除以窗平方和，完成歸一化：
         
