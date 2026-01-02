@@ -63,10 +63,14 @@
 
 - `#include <stdint.h>`：提供固定長度整數型別（如 int16_t），確保音訊資料位元數正確。
 
+- `#include <complex.h>：提供複數型別與運算（如 complex double, cexp），用於 FFT 與頻域處理。
+  
 - `#include <math.h>`：提供數學函式（如 sin, cos），用於 FIR 濾波器設計。
 
+- `#include <memory.h>：提供記憶體操作相關函式（如 memset）。
+  
 - `#include <stdlib.h>`：提供動態記憶體配置（malloc, free）。
-
+  
 - `#include <string.h>`：提供字串與記憶體操作函式。
 
 - `PI`：圓周率。
@@ -76,6 +80,10 @@
 - `M` = 441：取樣率轉換中的抽取倍率（downsampling factor）。
 
 - `P`= 1025：FIR 低通濾波器的 tap 數。
+
+- `Q = 1025：FIR 低通濾波器的 tap 數。
+
+- `N = 2048：FFT 與 IFFT 的運算長度。
 
 - `Wc` = PI / M：正規化截止角頻率。
 
