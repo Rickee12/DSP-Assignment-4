@@ -322,12 +322,15 @@ void framing(int N_in, int S, int num_frames, int16_t *L_in, int16_t *R_in, comp
 
 - #### 1.初始化窗函數與變數：
    - 宣告 `w[N]`，以儲存 Hamming window。
+     
    - `w[i] = 0.54 - 0.46 * cos(2πi / (N - 1))`， 藉由`for(i = 0; i < N; i++)`迴圈逐個計算window的係數，以降低頻譜洩漏。
 
 - #### 2.初始化輸出矩陣：
 
    - 以雙層`for`迴圈將 `xL_m` 與 `xR_m` 中所有 frame 與樣本初始化為 0。
+     
    - 外層迴圈`for(i = 0; i < num_frames; i++)` : 將每一個frame依序處理。
+     
    - 內層迴圈`for(j = 0; j < N; j++)` : 將frame裡的每一個樣本點都設為0。
 
 - #### 3.分幀與加窗處理：：
@@ -335,16 +338,23 @@ void framing(int N_in, int S, int num_frames, int16_t *L_in, int16_t *R_in, comp
   - 外層迴圈先依序處理每一個frame，而內層迴圈則處理每一個frame的前 P 個樣本。
 
   - 在`for`迴圈裡不斷計算對應的輸入索引
+    
     - `i` 表示目前處理的第 `i` 個 frame。
+      
     - `S` 為 hop length，代表兩個相鄰frame在時間軸上的位移量。
+    
     - `j`則表示為當下那個frame的第 `j` 個樣本。
+      
   - 將 frame 起始位置與 frame 內索引相加，得到對應輸入訊號的位置：`idx = i * S + j`。
+    
     - 若 `idx < N_in`，表示尚未超出輸入訊號範圍:
+      
       - 將左聲道樣本乘上 Hamming window，存入 `xL_m[i][j]`。
+        
       - 將右聲道樣本乘上 Hamming window，存入 `xR_m[i][j]`。
+        
   - 此處理完成後，每個 frame 皆為長度 N 的複數序列，可用於後續 FFT 分析。
  
-    
 ## 6. FIR 低通濾波器(fir_design)
 
 ```c
@@ -379,8 +389,11 @@ void fir_design(double *h_pad)
 	{
 		h[n] /= sum;
 	}
-	
+
+
 	// zero-padding
+
+
 	for(n = 0; n < N; n++) 
 	{
 		if(n < (Q - 1) / 2)                 // take the second half of h and put it at the beginning
@@ -401,8 +414,44 @@ void fir_design(double *h_pad)
 ```
 
 說明:
+- #### 因sinc函數在0的時候分母為0導致程式不好處理，故使用一個if-else來分開處理，在zero-padding時將原本濾波器
 
 
+- #### 1.計算濾波器中心索引 `mid = (P-1)/2`。
+
+- #### 2.`for` 迴圈：
+
+   - 計算對應的 `m = n - mid`。
+
+   - 計算 sinc 函數：
+
+     - 若 `m = 0`，取 `sinc = Wc / PI`（中心點值）。
+
+     - 否則 `sinc = sin( Wc * m) / (PI * m)`。
+
+   - 計算 Hamming window` w = 0.54 - 0.46 * cos(2 * PI * n / (P - 1))`。
+
+   - 將 sinc 與窗函數相乘得到濾波器脈衝響應 `h[n] = sinc * w`。
+
+- #### 3.正規化濾波器係數：
+
+  - 先計算總和 `sum = Σ h[n]`。
+
+  - 再將每個係數除以總和 `h[n] /= sum`，確保 DC gain = 1。
+
+- #### 4.Zero-padding：
+  
+  - 透過迴圈 `for(n = 0; n < N; n++)` 將原始濾波器 `h[n]` 的 Q 個係數重新排列並填入 `h_pad[n]`：
+    
+    - 若`n < (Q-1)/2`:
+      - 將原本的濾波器後半段（從中心點到最後）放到 padded array 的前面可以讓濾波器在頻域的零頻位置（DC）對齊 FFT 序列的開頭，保持對稱性。
+        
+    - 若`n > (Q-1)/2`：
+      - 將原本的濾波器前半段（從開頭到中心點前）放到 padded array 的中心點之後，可以讓濾波器的右半段與左半段對稱排列，保持線性相位並確保頻域乘法後相位正確。
+
+    - 若`n == (Q-1)/2`：
+      - 將 padded array 的中心點設為 0，避免中心樣本重複。
+   - 
 
 ## 7. FFT 與 IFFT 運算(FFT & IFFT)
 
@@ -555,20 +604,10 @@ void frequency_multiply(int num_frames, complex double **xL_m, complex double **
      - 程式結束 `return 0`。
 
 
-## 9. FIR low-pass filter作圖
-![](figure3/FIR_LPF_Magnitude.png)
+## 9. 
 
 
-FIR 低通濾波器之頻率響應分析
 
-本實驗中所設計之 FIR 低通濾波器，其脈衝響應由理想 sinc 函數乘上 Hamming window 所構成。理想情況下，時域中的 sinc 函數在經過傅立葉轉換後，於頻域中對應為一個矩形函數，也就是一個方波，因此可實現理想的低通濾波特性。
-
-在程式中，截止角頻率設定為:
-
-$$ Wc = \frac{\pi}{M} $$
-
-其中 M=441，因此截止頻率相對於 Nyquist 頻率而言非常小。此設定使得濾波器在頻域中的通帶寬度極窄，故在以 FFT 繪製頻率響應時，可觀察到一個頻寬很小的低通通帶，外觀近似於一個非常窄的矩形頻譜。
-然而，實際設計中並未使用無限長的 sinc，而是採用有限長度(P=1025）的 FIR 濾波器，並搭配 Hamming window 以降低頻域旁瓣效應。由於有限長截斷的影響，理想矩形頻譜在頻域中會產生漣波（Gibbs phenomenon），而 Hamming window 的使用則能有效抑制旁瓣能量，使頻率響應更加平滑，但同時也會導致通帶邊緣變得不再完全銳利，主瓣略為展寬。由此可得FIR低通濾波器的頻率響應呈現出「通帶狹窄、旁瓣抑制良好、邊緣平滑」的特性，符合在取樣率轉換（Sample Rate Conversion）中作為抗混疊與成像抑制濾波器的設計需求。
 
 ## 10. 總結
 本次作業利用 FIR 低通濾波器結合 Polyphase 分解方法，完成對立體聲 WAV 檔案的取樣率轉換 (Sample Rate Conversion, SRC)。FIR 濾波器設計採用窗函數法，時域採用 sinc function 再乘上 Hamming window，確保濾波器具有良好的頻率響應特性。由於 sinc 函數在時域對應於矩形函數在頻域，因此濾波器呈現理想低通特性，有效抑制超過目標奈奎斯特頻率的高頻成分，避免aliasing。
