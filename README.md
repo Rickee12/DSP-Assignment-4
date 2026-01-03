@@ -915,6 +915,35 @@ int main(void)
 
 ```
 說明:
+- #### 1.宣告變數:
+
+  - `xL`, `xR`：輸入左右聲道 PCM 陣列指標。
+
+  - `yL`, `yR`：輸出左右聲道 PCM 陣列指標。
+
+  - `N_in`, `N_out`：輸入樣本數與輸出樣本數。
+
+  - `fs_in`, `fs_out`：輸入與輸出取樣率。
+
+  - `S`：frame hop length，控制重疊量。
+
+  - `num_frames`：frame 數量。
+
+  - `N_ola`：overlap-add 所需的暫存總長度。
+
+  - `input_wav`, `output_wav`：輸入與輸出 WAV 檔案路徑。
+
+  - `xL_m`, `xR_m`：輸入 frame buffer，存放每個 frame 的 FFT 後資料。
+
+  - `yL_m`, `yR_m`：輸出 frame buffer，存放每個 frame 經濾波後的資料。
+
+  - `yL_tmp`, `yR_tmp`：overlap-add 暫存陣列。
+
+  - `h`：FIR 濾波器係數。
+
+  - `H`：FIR 濾波器 FFT 後的頻率響應。
+- #### 2.讀取輸入 WAV：
+       - 呼叫 read_wav_stereo，將檔案讀入左右聲道陣列。 若失敗，輸出錯誤訊息並結束程式。 印出輸入樣本數與取樣率。
 
 ## 12. 總結
 本次作業利用 FIR 低通濾波器結合 Polyphase 分解方法，完成對立體聲 WAV 檔案的取樣率轉換 (Sample Rate Conversion, SRC)。FIR 濾波器設計採用窗函數法，時域採用 sinc function 再乘上 Hamming window，確保濾波器具有良好的頻率響應特性。由於 sinc 函數在時域對應於矩形函數在頻域，因此濾波器呈現理想低通特性，有效抑制超過目標奈奎斯特頻率的高頻成分，避免aliasing。
