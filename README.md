@@ -819,7 +819,102 @@ void SRC(complex double *yL_tmp, complex double *yR_tmp, int16_t *yL, int16_t *y
 
  
 ## 11.主程式(main function)
+```c
+int main(void)
+{
+	int i;
+	int16_t *xL, *xR, *yL, *yR;
+	int N_in, N_out, N_out_L, N_out_R;
+	int fs_in, fs_out;
+	int S = P / 16;
+	int num_frames, N_ola;
 
+	const char *input_wav = "C:\\Users\\user\\Downloads\\blue_giant_fragment_44.4kHz_16bits_stereo.wav";
+	const char *output_wav = "C:\\Users\\user\\Downloads\\fft_output_src.wav";
+	
+	// Read input stereo WAV
+	if(read_wav_stereo(input_wav, &xL, &xR, &N_in, &fs_in) != 0)
+	{
+		printf("Failed to read WAV file\n");
+        return -1;
+	}
+	
+	num_frames = (N_in + S - 1) / S;   
+    N_ola = (num_frames - 1) * S + N;  
+    
+	// Allocate memory for frame buffers
+    complex double **xL_m = (complex double **)malloc(num_frames * sizeof(complex double *));
+    complex double **xR_m = (complex double **)malloc(num_frames * sizeof(complex double *));
+    complex double **yL_m = (complex double **)malloc(num_frames * sizeof(complex double *));
+    complex double **yR_m = (complex double **)malloc(num_frames * sizeof(complex double *));
+    for(i = 0; i < num_frames; i++)
+	{
+    	xL_m[i] = (complex double*)malloc(N * sizeof(complex double));
+        xR_m[i] = (complex double*)malloc(N * sizeof(complex double));
+        yL_m[i] = (complex double*)malloc(N * sizeof(complex double));
+        yR_m[i] = (complex double*)malloc(N * sizeof(complex double));
+    }
+   
+  
+    complex double *yL_tmp = (complex double *)calloc(N_ola, sizeof(complex double));
+    complex double *yR_tmp = (complex double *)calloc(N_ola, sizeof(complex double));
+    
+    yL = (int16_t *)malloc(N_ola * L / M * sizeof(int16_t));
+    yR = (int16_t *)malloc(N_ola * L / M * sizeof(int16_t));
+
+    //framing
+    framing(N_in, S, num_frames, xL, xR, xL_m, xR_m);
+	printf("input samples = %d, fs = %d HZ\n", N_in, fs_in);
+	printf("num_frames = %d, S = %d\n", num_frames, S);
+	
+	//FFT 
+	double h[N];
+	complex double H[N]; 
+	fir_design(h);
+	
+	//frequency response
+	for(i = 0; i < N; i++)
+	{
+		H[i] = h[i];
+	}
+	FFT(H);
+	
+	// signal spectrum
+	for(i = 0; i < num_frames; i++)
+	{
+		FFT(xL_m[i]);
+		FFT(xR_m[i]);
+	}
+	
+	//frequency_multiply
+	frequency_multiply(num_frames, xL_m, xR_m, yL_m, yR_m, H);
+	
+	//IFFT
+	for(i = 0; i < num_frames; i++)
+	{
+		IFFT(yL_m[i]);
+		IFFT(yR_m[i]);
+	}
+	
+	//overlap_add
+	overlap_add(num_frames, S, N_ola, yL_m, yR_m, yL_tmp, yR_tmp);
+	
+	//sample rate conversion
+    SRC(yL_tmp, yR_tmp, yL, yR, N_ola, &N_out);
+
+	// Write output WAV
+	fs_out = fs_in * L / M;
+    write_wav_stereo(output_wav, yL, yR, N_out, fs_out);
+
+    free(xL); free(xR);
+    free(yL); free(yR);
+
+    printf("SRC done. Output Fs = %d Hz, N_out = %d \n", fs_out, N_out );
+    return 0;
+}
+
+```
+說明:
 
 ## 12. 總結
 本次作業利用 FIR 低通濾波器結合 Polyphase 分解方法，完成對立體聲 WAV 檔案的取樣率轉換 (Sample Rate Conversion, SRC)。FIR 濾波器設計採用窗函數法，時域採用 sinc function 再乘上 Hamming window，確保濾波器具有良好的頻率響應特性。由於 sinc 函數在時域對應於矩形函數在頻域，因此濾波器呈現理想低通特性，有效抑制超過目標奈奎斯特頻率的高頻成分，避免aliasing。
