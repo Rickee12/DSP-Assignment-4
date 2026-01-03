@@ -915,7 +915,7 @@ int main(void)
 
 ```
 說明:
-- #### 1.宣告變數:
+- #### 1. 宣告變數:
 
   - `xL`, `xR`：輸入左右聲道 PCM 陣列指標。
 
@@ -942,8 +942,81 @@ int main(void)
   - `h`：FIR 濾波器係數。
 
   - `H`：FIR 濾波器 FFT 後的頻率響應。
-- #### 2.讀取輸入 WAV：
-       - 呼叫 read_wav_stereo，將檔案讀入左右聲道陣列。 若失敗，輸出錯誤訊息並結束程式。 印出輸入樣本數與取樣率。
+
+- #### 2. 讀取輸入 WAV：
+
+  - 呼叫 `read_wav_stereo`，將檔案讀入左右聲道陣列。
+
+  - 若失敗，輸出錯誤訊息並結束程式。
+
+  - 印出輸入樣本數與取樣率。
+       
+- #### 3. 計算 frame 數與 OLA 長度
+
+  - `num_frames = (N_in + S - 1) / S` 計算 frame 數量。
+
+  - `N_ola = (num_frames - 1) * S + N` 計算 overlap-add 所需暫存長度。
+ 
+  
+- #### 4. 配置 frame buffer 記憶體
+
+  - 動態分配 `xL_m`, `xR_m` 以存放每個 frame 的 FFT 輸入。
+
+  - 動態分配 `yL_m`, `yR_m` 以存放每個 frame 經濾波後的輸出。
+
+  - 動態分配 `yL_tmp`, `yR_tmp` 作為 overlap-add 暫存。
+
+  - 動態分配 `yL`, `yR` 作為最終輸出 PCM 陣列。
+
+- #### 5. Framing 與加窗
+
+  - 呼叫 `framing` 將輸入訊號依 frame 切分，並乘以 Hamming window。
+
+  - 每個 frame 長度為 `N`，前面不足的部分以零填充。
+
+- #### 6. FIR 濾波器設計與 FFT
+
+  - 呼叫 `fir_design` 設計低通 FIR 濾波器。
+
+  - 將濾波器係數零填充到 `N`，再呼叫 `FFT` 得到頻域表示 `H`。
+
+  - 對每個輸入 frame 呼叫 `FFT`，轉到頻域進行濾波。
+    
+- #### 7. 頻域相乘與 IFFT
+
+  - 呼叫 `frequency_multiply` 將每個 frame 的 FFT 與濾波器頻域 `H` 相乘。
+
+  - 對每個 frame 呼叫 `IFFT`，將頻域結果轉回時域。
+
+- #### 8. Overlap-add 重建訊號
+
+  - 呼叫 `overlap_add`，將每個 frame 的時域輸出依 hop length `S`重疊相加，並做窗函數歸一化。
+
+  - 結果存放在 `yL_tmp`, `yR_tmp`。
+  
+- #### 9. Sample Rate Conversion (線性內插)
+
+  - 呼叫 `SRC`，利用 linear interpolation 進行取樣率轉換。
+
+  - 每個輸出點以左右相鄰輸入樣本依小數距離加權平均。
+
+  - 得到最終輸出 PCM 陣列 `yL`, `yR`，並更新輸出樣本數 `N_out`。
+
+  - 計算輸出取樣率 `fs_out = fs_in * L / M`。
+
+- #### 10. 寫入輸出 WAV
+  
+  - 呼叫`write_wav_stereo` 將轉換後音訊寫入檔案。
+
+- #### 11. 釋放記憶體與結束程式
+- 
+  - 釋放 `xL`, `xR`, `yL`, `yR` 的動態記憶體。
+
+  - 釋放 frame buffer 與 overlap-add 暫存陣列。
+
+  - 印出輸出取樣率訊息。
+
+  - 結束程式 `return 0`。
 
 ## 12. 總結
 本次作業利用 FIR 低通濾波器結合 Polyphase 分解方法，完成對立體聲 WAV 檔案的取樣率轉換 (Sample Rate Conversion, SRC)。FIR 濾波器設計採用窗函數法，時域採用 sinc function 再乘上 Hamming window，確保濾波器具有良好的頻率響應特性。由於 sinc 函數在時域對應於矩形函數在頻域，因此濾波器呈現理想低通特性，有效抑制超過目標奈奎斯特頻率的高頻成分，避免aliasing。
