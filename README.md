@@ -79,7 +79,7 @@
 
 - `M` = 441：取樣率轉換中的抽取倍率（downsampling factor）。
 
-- `P`= 1025：FIR 低通濾波器的 tap 數。
+- `P`= 441：每個 frame 的有效樣本長度。
 
 - `Q` = 1025：FIR 低通濾波器的 tap 數。
 
@@ -142,13 +142,10 @@ typedef struct {
 
 
 
-
-
-
 ## 3. WAV 檔案讀取函數（read_wav_stereo）
 
 ```c
-int read_wav_stereo(const char *filename, int16_t **L_buf, int16_t **R_buf, int *N, int *fs)
+int read_wav_stereo(const char *filename, int16_t **L_buf, int16_t **R_buf, int *N_in, int *fs)
 {
 	FILE *fp = fopen(filename, "rb");      // Open WAV file in binary read mode
 	
@@ -161,7 +158,6 @@ int read_wav_stereo(const char *filename, int16_t **L_buf, int16_t **R_buf, int 
 	WAVHeader h;                               // WAV file header structure
 	fread(&h, sizeof(WAVHeader), 1, fp);        // Read WAV header from file
 	
-	
 	// Check if the WAV file is stereo and 16-bit PCM
 	if(h.num_channels != 2 || h.bits_per_sample != 16)
 	{
@@ -170,16 +166,14 @@ int read_wav_stereo(const char *filename, int16_t **L_buf, int16_t **R_buf, int 
 	}
 	
 	*fs = h.sample_rate;
-	*N = h.data_size/4;
+	*N_in = h.data_size/4;
 	
-	
-	*L_buf = (int16_t*)malloc((*N) * sizeof(int16_t));    // Allocate memory for left channel
-    *R_buf = (int16_t*)malloc((*N) * sizeof(int16_t));    // Allocate memory for right channel
-	
+	*L_buf = (int16_t*)malloc((*N_in) * sizeof(int16_t));    // Allocate memory for left channel
+    *R_buf = (int16_t*)malloc((*N_in) * sizeof(int16_t));    // Allocate memory for right channel
 	
 	//Read stereo samples
 	int i;
-	for( i = 0; i < *N; i++)
+	for( i = 0; i < *N_in; i++)
 	{
 		fread(&(*L_buf)[i], sizeof(int16_t), 1, fp);     
 		fread(&(*R_buf)[i], sizeof(int16_t), 1, fp);     
@@ -231,28 +225,27 @@ int read_wav_stereo(const char *filename, int16_t **L_buf, int16_t **R_buf, int 
 
 ## 4. WAV 檔案寫入函數（write_wav_stereo）
  
- ```c
-void write_wav_stereo(const char *filename, const int16_t *L_buf, const int16_t *R_buf, int N, int fs)
+```c
+void write_wav_stereo(const char *filename, const int16_t *L_buf, const int16_t *R_buf, int N_out, int fs)
 {
 	FILE *fp = fopen(filename, "wb");          // Open file in binary write mode
 	
 	WAVHeader h = {
         {'R','I','F','F'},
-        36 + N * 4,
+        36 + N_out * 4,
         {'W','A','V','E'},
         {'f','m','t',' '},
         16, 1, 2, fs,
         fs * 4, 4, 16,
         {'d','a','t','a'},
-        N * 4
+        N_out * 4
     };
     
     fwrite(&h, sizeof(WAVHeader), 1, fp);  // Write WAV header to file
 	
-	
 	//Write stereo samples
     int i;
-	for(i = 0; i < N; i++)        
+	for(i = 0; i < N_out; i++)        
 	{
 		fwrite(&L_buf[i], sizeof(int16_t), 1, fp);  
 		fwrite(&R_buf[i], sizeof(int16_t), 1, fp);   
@@ -347,13 +340,13 @@ void framing(int N_in, int S, int num_frames, int16_t *L_in, int16_t *R_in, comp
       
   - 將 frame 起始位置與 frame 內索引相加，得到對應輸入訊號的位置：`idx = i * S + j`。
     
-    - 若 `idx < N_in`，表示尚未超出輸入訊號範圍:
+    - 若 `idx < N_in`，表示未超出輸入訊號範圍:
       
       - 將左聲道樣本乘上 Hamming window，存入 `xL_m[i][j]`。
         
       - 將右聲道樣本乘上 Hamming window，存入 `xR_m[i][j]`。
         
-  - 此處理完成後，每個 frame 皆為長度 N 的複數序列，可用於後續 FFT 分析。
+  - 此處理完成後，每個 frame 皆為長度 N 的複數序列。
  
 ## 6. FIR 低通濾波器(fir_design)
 
@@ -443,19 +436,18 @@ void fir_design(double *h_pad)
 
 - #### 4.Zero-padding：
   - 初始化 padded array:
-    - 使用迴圈 `for(n = 0; n < N; n++)` 將 `h_pad[n]` 全部先初始化為 0，後續就不用再額外補0，以方便之後做FFT運算。
-  - 再透過迴圈 `for(n = 0; n < N; n++)` 將原始濾波器 `h[n]` 的 Q 個係數重新排列並填入 `h_pad[n]`：
     
-    - 若`n < (Q-1)/2`:
-      - 將原本的濾波器後半段（從中心點到最後）放到 padded array 的前面可以讓濾波器在頻域的零頻位置（DC）對齊 FFT 序列的開頭，保持對稱性。
-        
-    - 若`n > (Q-1)/2`：
-      - 將原本的濾波器前半段（從開頭到中心點前）放到 padded array 的中心點之後，可以讓濾波器的右半段與左半段對稱排列，保持線性相位並確保頻域乘法後相位正確。
-
-    - 若`n == (Q-1)/2`：
-      - 將 padded array 的中心點設為 0，避免中心樣本重複。
+    - 使用迴圈 `for(n = 0; n < N; n++)` 將 `h_pad[n]` 全部先初始化為 0，後續就不用再額外補0，以方便之後做FFT運算。
+      
+    - 再透過迴圈 `for(n = 0; n < N; n++)` 將原始濾波器 `h[n]` 的 Q 個係數重新排列並填入 `h_pad[n]`：
+    
+      - 若`n < (Q-1)/2`: 將原本的濾波器後半段（從中心點到最後）放到 padded array 的前面可以讓濾波器在頻域的零頻位置（DC）對齊 FFT 序列的開頭，保持對稱性。
+      
+      - 若`n > (Q-1)/2`： 將原本的濾波器前半段（從開頭到中心點前）放到 padded array 的中心點之後，可以讓濾波器的右半段與左半段對稱排列，保持線性相位並確保頻域乘法後相位正確。
+      
+      - 若`n == (Q-1)/2`： 將 padded array 的中心點設為 0，避免中心樣本重複。
+    
        
-
 ## 7. FFT 與 IFFT 運算(FFT & IFFT)
 
 ```c
@@ -1009,7 +1001,7 @@ int main(void)
   - 呼叫`write_wav_stereo` 將轉換後音訊寫入檔案。
 
 - #### 11. 釋放記憶體與結束程式
-- 
+ 
   - 釋放 `xL`, `xR`, `yL`, `yR` 的動態記憶體。
 
   - 釋放 frame buffer 與 overlap-add 暫存陣列。
