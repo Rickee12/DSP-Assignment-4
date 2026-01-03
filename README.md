@@ -1019,5 +1019,4 @@ int main(void)
   - 結束程式 `return 0`。
 
 ## 12. 總結
-本次作業利用 FIR 低通濾波器結合 Polyphase 分解方法，完成對立體聲 WAV 檔案的取樣率轉換 (Sample Rate Conversion, SRC)。FIR 濾波器設計採用窗函數法，時域採用 sinc function 再乘上 Hamming window，確保濾波器具有良好的頻率響應特性。由於 sinc 函數在時域對應於矩形函數在頻域，因此濾波器呈現理想低通特性，有效抑制超過目標奈奎斯特頻率的高頻成分，避免aliasing。
-為了將原始 44.1 kHz 立體聲 WAV 檔轉換為 80/441 倍的取樣率，透過 Polyphase 分解方法，將 FIR 濾波器拆分為 L 個子濾波器，每個子濾波器只作用於對應相位的輸入樣本。藉由這樣的方式可以使濾波與插值同步進行，大幅減少了運算量。結果顯示，輸出音訊維持良好的音質，無明顯混疊或失真，高頻部分經 FIR 低通濾波器有效抑制，避免超過奈奎斯特頻率的頻譜成分造成aliasing。
+本次作業利用 FFT-based FIR 低通濾波器，結合 frame-based 處理與 overlap-add 方法，完成對立體聲 WAV 檔案的取樣率轉換 (Sample Rate Conversion, SRC)。FIR 濾波器設計採用窗函數法，時域使用 sinc 函數再乘上 Hamming window，以確保濾波器具有理想的頻率響應特性，有效抑制超過目標奈奎斯特頻率的高頻成分，避免 aliasing。在 frame-based 處理中，輸入訊號被分割為長度為 N 的 frame，並乘以 Hamming window 進行加權。為了避免線性內插在取樣率轉換過程中，因 frame 邊界不連續而產生的雜訊（如沙沙聲），hop length 選擇 P/16，即約 98.6% 的重疊率。如此設定可使相鄰 frame 在 overlap-add 過程中平滑銜接，確保時域訊號連續且不產生明顯 artefacts。雖然重疊率較高會增加計算量，但能有效降低由 frame 切分與線性內插共同引起的邊界噪聲。在取樣率轉換階段，未直接進行 upsampling，而是採用線性內插（linear interpolation）。線性內插透過計算輸出取樣位置對應到輸入訊號的非整數索引，並依小數距離對左右相鄰樣本加權平均，完成近似取樣值。這種做法可以維持原本 frame 結構與 FFT-based 濾波的一致性，避免直接 upsampling 改變 frame 長度而影響後續 FFT 運算，同時有效降低失真，保持音訊品質。結果顯示，輸出音訊維持良好的立體聲效果，沒有明顯混疊或失真，高頻部分經 FIR 低通濾波器有效抑制，而 hop length 與線性內插策略則共同確保了平滑的時域重建與高品質的取樣率轉換效果。
